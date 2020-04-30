@@ -1,4 +1,4 @@
-from difflib import get_close_matches as g_c_m
+from difflib import get_close_matches as g_c_m, SequenceMatcher
 import json_data
 
 data = json_data.data
@@ -11,7 +11,7 @@ def greetings(first_time):
     if first_time:
         print("Hello! I will help you to find the meaning of the words :)")
     else:
-        print("Let's try again!")
+        print("Let's try again! \nOr type 'Exit() to close the session\n")
     u_word = input("Please, enter your word: ")
     return u_word
 
@@ -24,23 +24,37 @@ def translate(word):
         return data[word.capitalize()]
     elif word.upper() in data:
         return data[word.upper()]
-    elif not g_c_m(word, data.keys()):
-        return no_word(word)
     else:
-        return maybe_mistake(word)
+        return sequences(word)
 
 
-def no_word(u_word):
+def sequences(word):
+    """Trying to find similar words in json"""
+    dic_seq = {}
+    lower_gcm = g_c_m(word.lower(), data.keys())
+    upper_gcm = g_c_m(word.upper(), data.keys())
+    cap_gcm = g_c_m(word.capitalize(), data.keys())
+    for i in [lower_gcm, upper_gcm, cap_gcm]:
+        if i:
+            if SequenceMatcher(None, word, i[0]).ratio() > 0:
+                dic_seq[i[0]] = SequenceMatcher(None, word, i[0]).ratio()
+    if dic_seq:
+        best = max(dic_seq, key=dic_seq.get)
+        return maybe_mistake(best, word)
+    else:
+        return no_word(word)
+
+
+def no_word(word):
     """No-word-in-dic message"""
-    return "I don't know the '{}' word :(".format(u_word,)
+    return "I don't know the '{}' word :(".format(word,)
 
 
-def maybe_mistake(word):
-    """Trying to find similar words"""
-    best_word = g_c_m(word.lower(), data.keys())[0]
+def maybe_mistake(best, word):
+    """Asking for a similar word"""
     answer = input('Did u mean "{}" instead? '
-                   'Enter "Yes" if yes.\n'.format(best_word))
+                   'Enter "Yes" if yes.\n'.format(best))
     if not g_c_m(answer.lower(), answers):
         return no_word(word)
     else:
-        return data[best_word]
+        return data[best]
